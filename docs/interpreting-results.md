@@ -160,18 +160,21 @@ For agents without a loop, `expected_iterations` is not applicable — but `base
 ```json
 "classes": {
   "SCCs": [
-    [0],
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-    [13],
-    [14]
+    ["session.start"],
+    ["cycle.start", "cycle.phase:observe", "cycle.phase:ideate", "idea.proposed",
+     "cycle.phase:select", "cycle.phase:dispatch", "executor.start", "eval.end",
+     "executor.end", "cycle.phase:backprop", "cycle.phase:decide", "cycle.end"],
+    ["convergence.reached"],
+    ["session.end"]
   ],
-  "Recurrent": [
-    [14]
+  "Recurrent": [["session.end"]],
+  "Transient": [
+    "session.start", "cycle.start", "cycle.phase:observe", "cycle.phase:ideate",
+    "idea.proposed", "cycle.phase:select", "cycle.phase:dispatch", "executor.start",
+    "eval.end", "executor.end", "cycle.phase:backprop", "cycle.phase:decide",
+    "cycle.end", "convergence.reached"
   ],
-  "Transient": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-  "Periods": {
-    "3": 1
-  }
+  "Periods": {"session.end": 1}
 }
 ```
 
@@ -179,39 +182,39 @@ This section describes the **communicating class structure** of the Markov chain
 
 #### `SCCs` — Strongly Connected Components
 
-A Strongly Connected Component (SCC) is a group of states where the agent can get from any state in the group to any other state in the same group. States are listed by index into `boundary_states` (zero-based).
+A Strongly Connected Component (SCC) is a group of states where the agent can get from any state in the group to any other state in the same group.
 
 Arbor has four SCCs:
 
-| SCC | Indices | State names | Description |
-| --- | ------- | ----------- | ----------- |
-| `[0]` | 0 | `session.start` | Entry point — visited once, never returned to |
-| `[1..12]` | 1–12 | `cycle.start` through `cycle.end` | The main cycle — the agent loops here |
-| `[13]` | 13 | `convergence.reached` | Transition state — visited once after the loop exits |
-| `[14]` | 14 | `session.end` | Terminal state — the target |
+| SCC | Description |
+| --- | ----------- |
+| `["session.start"]` | Entry point — visited once, never returned to |
+| `["cycle.start", ..., "cycle.end"]` | The main cycle — the agent loops here |
+| `["convergence.reached"]` | Transition state — visited once after the loop exits |
+| `["session.end"]` | Terminal state — the target |
 
-The large SCC (`[1..12]`) is the full observation-ideation-selection-dispatch-execution-evaluation loop. All 12 cycle states are mutually reachable — the agent can traverse the entire loop repeatedly. This is exactly what you would expect from a cyclic optimisation agent.
+The large 12-state SCC is the full observation-ideation-selection-dispatch-execution-evaluation loop. All 12 cycle states are mutually reachable — the agent can traverse the entire loop repeatedly. This is exactly what you would expect from a cyclic optimisation agent.
 
 #### `Recurrent` — permanent traps
 
 ```json
-"Recurrent": [[14]]
+"Recurrent": [["session.end"]]
 ```
 
 A recurrent class is a group of states the agent enters and **never leaves**. Once the agent reaches a recurrent state, it stays there forever (or keeps cycling within the group forever, if the group has more than one state).
 
-**For Arbor: only `session.end` (index 14) is recurrent.** This is the ideal result. It means the only trap is the goal state — the agent will always eventually reach `session.end` and stay there. There are no pathological loops.
+**For Arbor: only `session.end` is recurrent.** This is the ideal result. It means the only trap is the goal state — the agent will always eventually reach `session.end` and stay there. There are no pathological loops.
 
 **The critical red flag: a recurrent class that does not contain your target.**
 
-If `Recurrent` contained `[[2, 3, 4]]` and your target was `[14]`, it would mean the agent can get permanently trapped cycling between states 2, 3, and 4 — and never reach the goal. This is **epistemic thrashing**: the agent loops indefinitely and can never converge.
+If `Recurrent` contained `[["cycle.phase:observe", "cycle.phase:ideate", "idea.proposed"]]` and your target was `session.end`, it would mean the agent can get permanently trapped cycling between those states and never reach the goal. This is **epistemic thrashing**: the agent loops indefinitely and can never converge.
 
 When you see this, the MFPT to your target is mathematically infinite from the trapped states — the agent will never get there. This is a blocking diagnostic, not just a performance concern.
 
 #### `Transient` — states the agent will eventually leave
 
 ```json
-"Transient": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+"Transient": ["session.start", "cycle.start", ..., "convergence.reached"]
 ```
 
 Transient states are ones the agent will eventually leave with probability 1. For a well-structured agent, everything except the terminal state should be transient. Arbor's output is correct: 14 of 15 states are transient, only `session.end` is recurrent.
@@ -219,12 +222,12 @@ Transient states are ones the agent will eventually leave with probability 1. Fo
 #### `Periods`
 
 ```json
-"Periods": {"3": 1}
+"Periods": {"session.end": 1}
 ```
 
 The period of an SCC is the greatest common divisor of all cycle lengths within that SCC. Period 1 means **aperiodic** — the agent can return to a state after any number of steps (not just multiples of some fixed period). Period 1 is healthy and required for soka's MFPT calculations to be well-defined.
 
-The key `"3"` is the index of the SCC (`[1..12]`, the main cycle) in the `SCCs` array — not a state index. Its period is `1`, meaning the main cycle is aperiodic.
+The key is the first state name of the recurrent SCC. `"session.end": 1` means the terminal SCC is aperiodic — which is always true for a single absorbing state.
 
 ---
 

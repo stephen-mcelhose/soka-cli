@@ -231,6 +231,20 @@ The key is the first state name of the recurrent SCC. `"session.end": 1` means t
 
 ---
 
+### `total_suggestions`
+
+```json
+"total_suggestions": 96
+```
+
+The total number of edges that would improve MFPT if reinforced, before `--top-k` truncation. The `suggestions` array shows only the top-k (default 5).
+
+This number matters for interpretation. When the top-k suggestions all look similar — identical deltas, same destination — you need to know whether that pattern holds across all 96 candidates or whether it breaks after entry 5. If `total_suggestions` is large and the top few all look the same, the structural bottleneck conclusion holds. If `total_suggestions` is 6 and 5 look similar, check the 6th before concluding.
+
+To see more: `soka suggest --top-k 20 ...` or `--top-k 0` for all of them.
+
+---
+
 ### `suggestions`
 
 ```json
@@ -247,7 +261,7 @@ The key is the first state name of the recurrent SCC. `"session.end": 1` means t
 ]
 ```
 
-The suggestions are ranked policy interventions — specific edges in the agent's transition graph that, if adjusted, would reduce MFPT the most.
+The top-k ranked policy interventions — specific edges in the agent's transition graph that, if adjusted, would reduce MFPT the most.
 
 Each suggestion has six fields:
 
@@ -274,7 +288,7 @@ This is a local linear approximation — it is exact for the given epsilon, but 
 #5  idea.proposed  → session.end     delta: -7.6   projected: 20.3
 ```
 
-**The pattern.** Every single suggestion is "shift mass from somewhere in the execution loop directly to `session.end`." And the deltas are almost identical (-7.5 to -8.0 across all five). This is not a coincidence.
+**The pattern.** Every single suggestion is "shift mass from somewhere in the execution loop directly to `session.end`." And the deltas are almost identical (-7.5 to -8.0 across all five). This is not a coincidence — and `total_suggestions: 96` confirms it is not an artefact of the top-5 cutoff. All 96 improvable edges follow the same pattern.
 
 When suggestions cluster like this — many edges, similar deltas, all pointing to the same destination — it means **the bottleneck is not a specific broken transition.** It is a structural property of the whole loop. The agent is cycling too many times before converging.
 

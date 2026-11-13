@@ -94,14 +94,21 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 		}
 	}
 
+	// Request all suggestions (TopK: 0) so we can record the total before trimming.
 	report, err := stream.AnalyzeAndSuggest(k, stream.SuggestConfig{
 		TargetState:  target,
 		Controllable: splitCSV(knobs),
 		Epsilon:      eps,
-		TopK:         topK,
+		TopK:         0,
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	totalSuggestions := len(report.Suggestions)
+	shown := report.Suggestions
+	if topK > 0 && len(shown) > topK {
+		shown = shown[:topK]
 	}
 
 	return map[string]any{
@@ -112,7 +119,8 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 		"classes":             namedClasses(report.Classes, report.BoundaryStates),
 		"baseline_mfpt":       finiteOrNil(report.BaselineMFPT),
 		"expected_iterations": expectedIterations(report.Classes, report.BaselineMFPT),
-		"suggestions":         sanitizeSuggestions(report.Suggestions),
+		"total_suggestions":   totalSuggestions,
+		"suggestions":         sanitizeSuggestions(shown),
 	}, nil
 }
 

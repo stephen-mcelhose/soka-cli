@@ -5,118 +5,95 @@ description: "Interpret soka suggest JSON output and return a plain-English verd
 
 # soka-interpret
 
-Translates the JSON output of `soka suggest` (or a `--stream` tick) into a structured plain-English verdict. Applies the heuristics from `docs/interpreting-results.md` to produce a health assessment, key finding, and concrete recommended action.
+Translates the output of `soka suggest` (optionally pre-triaged by `soka check`) into a structured plain-English verdict. The output is always a *hypothesis to test*, never a confident verdict — soka works with small samples and the numbers are directional, not conclusive.
 
 ---
 
 ## Input
 
-The agent passes soka JSON — either the full `soka suggest` output or a single stream tick. Additional context about the agent type or what the states mean is optional but improves action specificity.
+Either:
+- Full `soka suggest` JSON, or
+- A `soka check` result (`{health, flags}`) combined with the raw suggest JSON
+
+Additional context about the agent type or what the states mean is optional but improves action specificity.
 
 ---
 
 ## Output
 
-Always produce a structured verdict with these four fields:
+Always produce a structured verdict with these three fields:
 
 ```
-health:   green | yellow | red
+health:   green | yellow | red   (pass through from soka check if available, otherwise derive)
 finding:  <one sentence — what the data actually shows>
-action:   <plain English — what to try next>
-confidence: low | medium | high
+action:   <what to try next, always ending with "pool more sessions to validate">
 ```
 
 Optionally add `caveat` if there is a nuance the caller should know.
 
+**On red:** do not recommend changes — fix the structural issue first.
+
 ---
 
-## Interpretation rules
+## Triage
 
-Apply these in order. The first triggered rule sets `health`.
+The mechanical health rules (null MFPT, recurrent traps, event count, skip rate, entropy) are handled by `soka check`. If a `soka check` result is available, use it directly. If not, `soka check` can be run as:
 
-### 1. Red flags (health: red — fix before optimising)
-
-- `baseline_mfpt` is `null` → target is unreachable from some states. Check `classes.Recurrent` for traps that exclude the target. **Do not act on suggestions — fix structure first.**
-- Any entry in `classes.Recurrent` whose states do not include the target → epistemic thrashing trap. The agent can loop forever and never reach the goal. This is a correctness failure, not a performance one.
-- `events_processed < 20` → too few events for a reliable kernel. Results are illustrative only. **Do not act — pool more runs first.**
-
-### 2. Yellow flags (health: yellow — act with caution)
-
-- `events_processed` between 20 and 50 → low sample size. Results are directional but noisy. Pool more sessions before committing to a change.
-- `lines_skipped` > 10% of `events_processed` → event format mismatch. Check field names; the kernel may be missing significant state transitions.
-- `entropy_rate_bits` very high (> 2.0) → agent policy is nearly random. MFPT estimate is noisier; structural conclusions are less reliable.
-
-### 3. Green (health: green — results are actionable)
-
-All red and yellow conditions are absent.
+```sh
+soka suggest --target <target> events.jsonl | soka check
+```
 
 ---
 
 ## Reading the suggestions
 
-Once health is determined, interpret the suggestions:
+Once health is known, interpret the `suggestions` array from the suggest output:
 
-**Clustered pattern** — all top suggestions point to the same destination state, with similar `mfpt_delta` values:
+**Clustered pattern** — all top suggestions point to the same destination state with similar `mfpt_delta` values:
 - Loop count is the structural driver, not any single edge
-- The convergence criterion (the logic that decides when to stop looping) is the highest-leverage place to experiment
-- Action: *"Adjust the stopping condition in `<loop-control state>` to exit the cycle more aggressively."*
+- Action: *"Test tightening the stopping condition in `<loop-control state>` so the agent exits the cycle more aggressively."*
 
 **Single-edge pattern** — one suggestion has a much larger delta than the rest:
-- One specific routing decision accounts for most of the MFPT
-- Directly tunable: reinforce that transition
-- Action: *"Increase the probability of `<from>` → `<to>`. When the agent is in `<from>`, it should prefer `<to>` over its current default path."*
+- One routing decision accounts for most of the MFPT
+- Action: *"Test increasing the probability of `<from>` → `<to>`. When the agent is in `<from>`, it should prefer `<to>` over its current default path."*
 
 **Flat / no improvement** — `projected_mfpt` is still very high for all suggestions:
-- No single-edge perturbation will move the needle
-- The structure runs deeper; consider whether the target state is correctly defined or whether the agent needs architectural changes
-
----
-
-## Confidence calibration
-
-| `events_processed` | confidence |
-| ------------------ | ---------- |
-| < 20               | — (red, don't act) |
-| 20 – 50            | low        |
-| 50 – 200           | medium     |
-| > 200              | high       |
-
-Low entropy (`entropy_rate_bits ≈ 0`) with medium/high event count upgrades confidence by one level — a deterministic policy makes MFPT estimates more trustworthy despite smaller samples.
+- No single-edge perturbation will move the needle; the structure may run deeper
+- Action: *"Check whether the target state is correctly defined. Consider whether the agent needs architectural changes rather than routing adjustments."*
 
 ---
 
 ## Example verdicts
 
-**Arbor-style clustered output:**
+**Arbor-style clustered output (yellow — 39 events):**
 
 ```
-health:     green
-finding:    MFPT is 27.9 steps (~2.3 cycles); all 96 suggestions point to session.end
-            with uniform deltas (-7.5 to -8.0), confirming loop count is the structural driver.
-action:     Tighten the convergence criterion in cycle.phase:decide — make the agent exit
-            the loop more aggressively after execution. A 10% shift projects MFPT to 19.9 (−29%).
-confidence: medium  (39 events, entropy ≈ 0 — deterministic policy, so estimate is reliable)
+health:   yellow
+finding:  MFPT is 27.9 steps (~2.3 cycles); all 96 suggestions point to session.end
+          with uniform deltas (-7.5 to -8.0) — loop count is the structural driver.
+action:   Test tightening the convergence criterion in cycle.phase:decide so the agent
+          exits the loop more aggressively. A 10% shift projects MFPT to 19.9 (−29%).
+          Pool more sessions to validate — 39 events is a small sample.
+caveat:   Entropy ≈ 0, so the estimate is more reliable than the sample size alone suggests.
 ```
 
-**Thrashing trap:**
+**Thrashing trap (red):**
 
 ```
-health:     red
-finding:    Recurrent class [[cycle.phase:observe, cycle.phase:ideate]] excludes the target.
-            MFPT is infinite from trapped states — agent can never reach session.end.
-action:     Fix the loop exit condition before optimising. The agent needs a path out of
-            the observe–ideate cycle that leads toward session.end.
-confidence: —
+health:   red
+finding:  Recurrent class [cycle.phase:observe, cycle.phase:ideate] excludes the target —
+          the agent can loop forever and never reach session.end.
+action:   Fix the loop exit condition before optimising. The agent needs a reachable
+          path from the observe–ideate cycle to session.end.
 ```
 
-**Low data:**
+**Too little data (red):**
 
 ```
-health:     yellow
-finding:    Only 14 events processed — kernel is too sparse for reliable conclusions.
-action:     Pool at least 3–5 more sessions and re-run. Use
-            `cat session-*.jsonl | soka suggest --target session.end`.
-confidence: low
+health:   red
+finding:  Only 14 events processed — kernel is too sparse for any structural conclusions.
+action:   Pool more sessions and re-run:
+          cat session-*.jsonl | soka suggest --target session.end
 ```
 
 ---

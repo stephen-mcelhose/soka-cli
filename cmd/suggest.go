@@ -156,6 +156,7 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 	}
 
 	return map[string]any{
+		"target":              target,
 		"events_processed":    observed,
 		"lines_skipped":       skipped,
 		"boundary_states":     report.BoundaryStates,

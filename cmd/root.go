@@ -8,6 +8,7 @@ func NewRootCmd() *cobra.Command {
 		Short: "Self Optimizing Knowledge Agents — Markov-based policy analysis for agent event streams",
 	}
 	root.AddCommand(newSuggestCmd())
+	root.AddCommand(newCheckCmd())
 	root.AddCommand(newMCPCmd())
 	return root
 }

@@ -1,0 +1,32 @@
+# Binaries
+soka
+soka-cli
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+coverage.html
+
+# Dependency vendor directory
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo

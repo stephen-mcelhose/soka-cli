@@ -29,7 +29,7 @@ func newSuggestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "suggest [file]",
 		Short: "Estimate a Markov kernel from a JSONL event stream and suggest MFPT knobs",
-			Long: `Ingest a JSONL agent event stream, estimate a Markov transition kernel,
+		Long: `Ingest a JSONL agent event stream, estimate a Markov transition kernel,
 and return ranked policy knobs — edges in the agent's state graph whose
 reinforcement would most reduce the mean number of steps to reach --target.
 
@@ -54,7 +54,7 @@ one result at EOF. Tick format:
 
 See https://github.com/stephen-mcelhose/soka-cli/blob/main/docs/interpreting-results.md
 for a full field-by-field walkthrough.`,
-			Example: `  # one-shot from file
+		Example: `  # one-shot from file
   soka suggest --target session.end events.jsonl
 
   # from stdin

@@ -80,9 +80,9 @@ func runStream(r io.Reader, w io.Writer, target, keep, knobs string, halfLife, e
 	enc := json.NewEncoder(w)
 
 	var (
-		tickNum         int
-		observed        int
-		lastMFPT        = math.NaN()
+		tickNum          int
+		observed         int
+		lastMFPT         = math.NaN()
 		lastTickObserved int
 	)
 

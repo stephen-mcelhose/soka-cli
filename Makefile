@@ -22,7 +22,7 @@ check: build vet test
 ## inspect: launch the MCP Inspector UI against soka mcp
 ##   Opens http://localhost:5173 — use this to verify any change to cmd/mcp.go
 inspect: build
-	npx @modelcontextprotocol/inspector ./$(BINARY) mcp
+	npx --registry https://registry.npmjs.org @modelcontextprotocol/inspector ./$(BINARY) mcp
 
 ## experiment-arbor: run the Arbor end-to-end experiment
 experiment-arbor: build

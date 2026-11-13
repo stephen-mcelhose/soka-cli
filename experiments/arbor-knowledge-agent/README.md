@@ -66,10 +66,26 @@ A representative prompt:
 ```
 Optimize the kNN solver in /tmp/algotune_knn/solution.py for throughput.
 Eval: python3 eval.py from /tmp/algotune_knn — score: <float>, higher is better.
-Baseline: ~1.01x. CPU-only NumPy only. Up to 4 cycles.
+Baseline: ~1.01x. CPU-only NumPy only. Up to 4 cycles. Run name: live-run-1.
 ```
 
-After the run, the agent reconstructs `events.jsonl` from the idea tree and eval logs, then copies it to `testdata/`.
+The agent calls `arbor_state.py init` at the start of the session, which creates the session
+directory and writes the first event. Every subsequent `add`, `eval`, `update`, `record`, and
+`emit` call appends to the same file automatically — no post-hoc reconstruction.
+
+After the run, copy the live log to `testdata/`:
+
+```sh
+cp /tmp/algotune_knn/.arbor/sessions/live-run-1/events.jsonl \
+   experiments/arbor-knowledge-agent/testdata/arbor-live.jsonl
+```
+
+Then run analysis against it:
+
+```sh
+bash experiments/arbor-knowledge-agent/run.sh \
+  FIXTURE=experiments/arbor-knowledge-agent/testdata/arbor-live.jsonl
+```
 
 ---
 

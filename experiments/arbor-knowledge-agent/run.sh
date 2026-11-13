@@ -27,7 +27,7 @@
 
 set -euo pipefail
 
-FIXTURE="testdata/arbor-demo.jsonl"
+FIXTURE="${FIXTURE:-testdata/arbor-demo.jsonl}"
 SOKA="${SOKA:-./soka}"
 
 KEEP="session.start,cycle.start,cycle.phase:observe,cycle.phase:ideate,cycle.phase:select,cycle.phase:dispatch,cycle.phase:backprop,cycle.phase:decide,cycle.end,executor.start,executor.end,idea.proposed,idea.completed,idea.merged,idea.pruned,convergence.reached,session.end"

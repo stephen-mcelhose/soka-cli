@@ -123,4 +123,4 @@ confidence: low
 
 ## Reference
 
-Full heuristic reference: `docs/interpreting-results.md`
+Full heuristic reference: https://github.com/stephen-mcelhose/soka-cli/blob/main/docs/interpreting-results.md

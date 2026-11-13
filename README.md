@@ -52,8 +52,15 @@ cat events.jsonl | soka suggest --target CLAIM_VERIFIED --top-k 3
   "lines_skipped": 3,
   "boundary_states": ["QUERY_DECOMPOSED", "CLAIM_VERIFIED", "ABSTAINED_DEAD_END"],
   "entropy_rate_bits": 1.42,
-  "classes": ["ergodic"],
+  "classes": {
+    "SCCs": [["QUERY_DECOMPOSED", "CLAIM_VERIFIED"], ["ABSTAINED_DEAD_END"]],
+    "Recurrent": [["ABSTAINED_DEAD_END"]],
+    "Transient": ["QUERY_DECOMPOSED", "CLAIM_VERIFIED"],
+    "Periods": {"ABSTAINED_DEAD_END": 1}
+  },
   "baseline_mfpt": 8.3,
+  "expected_iterations": 4.15,
+  "total_suggestions": 12,
   "suggestions": [
     {
       "from": "CONTRADICTION_FOUND",
@@ -66,6 +73,8 @@ cat events.jsonl | soka suggest --target CLAIM_VERIFIED --top-k 3
   ]
 }
 ```
+
+For a full field-by-field walkthrough see [docs/interpreting-results.md](docs/interpreting-results.md).
 
 ### `soka mcp`
 

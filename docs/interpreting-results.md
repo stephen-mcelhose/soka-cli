@@ -125,7 +125,7 @@ This is the operationally meaningful number. MFPT of 27.9 is abstract; "2.3 iter
 - `baseline_mfpt` is itself `null`
 - The agent has multiple loops of similar size (ambiguous which is "the" main cycle)
 
-For agents without a loop, `baseline_mfpt` alone is the right metric.
+For agents without a loop, `expected_iterations` is not applicable — but `baseline_mfpt` and `suggestions` together still give a clear picture: MFPT is the pipeline depth, and the top suggestion identifies the specific step most worth shortcutting.
 
 ---
 

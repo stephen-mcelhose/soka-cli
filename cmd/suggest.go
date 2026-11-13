@@ -109,11 +109,68 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 		"lines_skipped":       skipped,
 		"boundary_states":     report.BoundaryStates,
 		"entropy_rate_bits":   report.EntropyRate,
-		"classes":             report.Classes,
+		"classes":             namedClasses(report.Classes, report.BoundaryStates),
 		"baseline_mfpt":       finiteOrNil(report.BaselineMFPT),
 		"expected_iterations": expectedIterations(report.Classes, report.BaselineMFPT),
 		"suggestions":         sanitizeSuggestions(report.Suggestions),
 	}, nil
+}
+
+// namedClasses translates a ClassDecomposition's integer indices into state names
+// using the boundary_states slice, so the JSON output is human-readable.
+// Falls back to the raw ClassDecomposition if the type assertion fails.
+func namedClasses(classes any, names []string) any {
+	cd, ok := classes.(*catrace.ClassDecomposition)
+	if !ok {
+		return classes
+	}
+
+	nameOf := func(idx int) string {
+		if idx >= 0 && idx < len(names) {
+			return names[idx]
+		}
+		return fmt.Sprintf("state_%d", idx)
+	}
+
+	nameSCC := func(scc []int) []string {
+		out := make([]string, len(scc))
+		for i, idx := range scc {
+			out[i] = nameOf(idx)
+		}
+		return out
+	}
+
+	sccs := make([][]string, len(cd.SCCs))
+	for i, scc := range cd.SCCs {
+		sccs[i] = nameSCC(scc)
+	}
+
+	recurrent := make([][]string, len(cd.Recurrent))
+	for i, scc := range cd.Recurrent {
+		recurrent[i] = nameSCC(scc)
+	}
+
+	transient := make([]string, len(cd.Transient))
+	for i, idx := range cd.Transient {
+		transient[i] = nameOf(idx)
+	}
+
+	// Periods keys are SCC indices; convert to the first state name of that SCC.
+	periods := make(map[string]int, len(cd.Periods))
+	for sccIdx, period := range cd.Periods {
+		key := fmt.Sprintf("scc_%d", sccIdx)
+		if sccIdx >= 0 && sccIdx < len(cd.SCCs) && len(cd.SCCs[sccIdx]) > 0 {
+			key = nameOf(cd.SCCs[sccIdx][0])
+		}
+		periods[key] = period
+	}
+
+	return map[string]any{
+		"SCCs":      sccs,
+		"Recurrent": recurrent,
+		"Transient": transient,
+		"Periods":   periods,
+	}
 }
 
 // expectedIterations divides baseline_mfpt by the size of the largest transient

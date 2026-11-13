@@ -145,7 +145,7 @@ For agents without a loop, `expected_iterations` is not applicable — but `base
 - **High entropy** (e.g. `2.0` bits for a chain with 4 possible transitions from each state) means the agent is effectively random — it has not learned a stable policy.
 - **Mid-range** means the agent has meaningful variation — different inputs or contexts lead to genuinely different paths.
 
-**For Arbor.** `1.6e-11` is so close to zero it is effectively zero. Arbor is running the exact same cycle sequence on every trace in this dataset. This tells us:
+**For Arbor.** The scale matters here. Entropy rate is bounded above by `log2(average out-degree)` — the maximum bits per step if the agent chose each outgoing transition with equal probability. Arbor's states mostly have one or two reachable successors, so the ceiling is roughly `log2(2) = 1 bit`. `1.6e-11` against a ceiling of `~1 bit` is eleven orders of magnitude below maximum — which is what makes it effectively zero, not intuition. Arbor is running the exact same cycle sequence on every trace in this dataset. This tells us:
 
 1. The trace is from a single session with a fixed policy — there is no exploration.
 2. The MFPT estimate is reliable for this specific policy (but may not generalise to other Arbor configurations).

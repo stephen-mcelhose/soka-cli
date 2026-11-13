@@ -225,9 +225,13 @@ Transient states are ones the agent will eventually leave with probability 1. Fo
 "Periods": {"session.end": 1}
 ```
 
-The period of an SCC is the greatest common divisor of all cycle lengths within that SCC. Period 1 means **aperiodic** — the agent can return to a state after any number of steps (not just multiples of some fixed period). Period 1 is healthy and required for soka's MFPT calculations to be well-defined.
+The period of an SCC is the greatest common divisor of all cycle lengths within that SCC. Period 1 means **aperiodic** — the agent can return to a state after any number of steps, not only multiples of some fixed number.
 
-The key is the first state name of the recurrent SCC. `"session.end": 1` means the terminal SCC is aperiodic — which is always true for a single absorbing state.
+Period 1 is the common case for real agents. Period > 1 is possible — it means the agent follows a strict fixed-length cycle with no branching or self-loops — but rare in practice because real traces have branching and the EMA estimator's smoothing tends to wash it out.
+
+**Period does not affect MFPT.** soka computes MFPT by solving a linear system, which works regardless of period. What period > 1 would break is stationary distribution estimation via power iteration — a periodic chain oscillates rather than converging. MFPT being well-defined depends on **reachability** (is the target accessible?), not aperiodicity. That is what `baseline_mfpt: null` signals.
+
+The key is the first state name of the recurrent SCC. `"session.end": 1` is always 1 for a single absorbing state — a single-state SCC has only trivial cycles of length 1, so its period is 1 by definition.
 
 ---
 

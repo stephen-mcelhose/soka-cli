@@ -51,6 +51,7 @@ cat events.jsonl | soka suggest --target CLAIM_VERIFIED --top-k 3
 
 ```json
 {
+  "target": "CLAIM_VERIFIED",
   "events_processed": 412,
   "lines_skipped": 3,
   "boundary_states": ["QUERY_DECOMPOSED", "CLAIM_VERIFIED", "ABSTAINED_DEAD_END"],
@@ -102,6 +103,41 @@ Tick output (newline-delimited JSON):
 ```
 
 `--min-events` (default 50) is a data sufficiency floor — no tick fires until at least that many events have been ingested. `--delta-threshold` suppresses ticks where MFPT is stable; 0 (default) emits at every session boundary.
+
+### `soka check`
+
+Reads `soka suggest` JSON (from stdin or a file) and applies deterministic triage rules to produce a health verdict. Useful as a lightweight first pass before interpretation.
+
+```sh
+soka suggest --target answer:done events.jsonl | soka check
+soka check result.json
+```
+
+**Output** (JSON)
+
+```json
+{
+  "health": "yellow",
+  "flags": ["low_events:39"]
+}
+```
+
+| Health   | Meaning                                                   |
+| -------- | --------------------------------------------------------- |
+| `green`  | No issues — results are directional                       |
+| `yellow` | Data quality concerns — treat results with caution        |
+| `red`    | Structural or data problem — do not act, fix first        |
+
+Exits non-zero on `red`. Flags reported:
+
+| Flag                      | Trigger                                        | Health   |
+| ------------------------- | ---------------------------------------------- | -------- |
+| `null_mfpt`               | `baseline_mfpt` is null                        | red      |
+| `recurrent_trap:<states>` | Recurrent class excludes the target            | red      |
+| `too_few_events:<N>`      | `events_processed < 20`                        | red      |
+| `low_events:<N>`          | `events_processed` between 20–50               | yellow   |
+| `high_skip_rate:<pct>%`   | `lines_skipped / events_processed > 10%`       | yellow   |
+| `high_entropy:<val>`      | `entropy_rate_bits > 2.0`                      | yellow   |
 
 ### `soka mcp`
 

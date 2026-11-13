@@ -322,6 +322,8 @@ The synthesis: **Arbor is structurally healthy. If lower MFPT is the goal, the c
 
 ## Common warning signs
 
+Run `soka suggest ... | soka check` to have the first four rows detected automatically. The rest require reading the suggestions.
+
 | Observation | What it likely means |
 | ----------- | -------------------- |
 | `baseline_mfpt: null` | Target is unreachable from some starting states — check for recurrent traps |
@@ -344,6 +346,6 @@ The synthesis: **Arbor is structurally healthy. If lower MFPT is the goal, the c
 
 **If `baseline_mfpt` is null or recurrent traps exist**: fix correctness before optimising for speed. A trapped agent never reaches the goal regardless of how fast it moves.
 
-**If `events_processed` is low**: pool more runs first (see [issue #1](https://github.com/stephen-mcelhose/soka-cli/issues/1)). Running `soka suggest` on 10 sessions concatenated will give a much more reliable kernel than running it on one.
+**If `events_processed` is low**: pool more runs first (see [issue #1](https://github.com/stephen-mcelhose/soka-cli/issues/1)). Running `soka suggest` on 10 sessions concatenated will give a much more reliable kernel than running it on one. `soka check` will flag this automatically as `too_few_events` or `low_events`.
 
 **To verify an improvement**: run the agent with the adjusted policy, collect a new trace, run `soka suggest` again, and compare `baseline_mfpt` before and after. A real improvement shows as a lower MFPT in the new trace.

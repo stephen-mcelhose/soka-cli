@@ -83,6 +83,7 @@ Stream mode (--stream):
 	cmd.Flags().Float64Var(&f.eps, "eps", 0.10, "how much transition mass to shift per perturbation (0–1)")
 	cmd.Flags().IntVar(&f.topK, "top-k", 5, "number of top suggestions to return (0 = all)")
 	cmd.Flags().IntVar(&f.topK, "top", 5, "alias for --top-k")
+	_ = cmd.Flags().MarkHidden("top")
 	cmd.Flags().BoolVar(&f.stream, "stream", false, "stream mode: emit a JSON tick at each session boundary instead of blocking until EOF")
 	cmd.Flags().IntVar(&f.sf.minEvents, "min-events", 50, "minimum events before emitting the first tick (stream mode only)")
 	cmd.Flags().Float64Var(&f.sf.deltaThreshold, "delta-threshold", 0, "suppress ticks where MFPT change is below this value; 0 = emit every session boundary (stream mode only)")

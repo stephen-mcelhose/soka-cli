@@ -21,6 +21,9 @@ vendor/
 go.work
 go.work.sum
 
+# Experiment fixtures (fetched on demand, never committed)
+testdata/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -149,9 +149,9 @@ For agents without a loop, `expected_iterations` is not applicable — but `base
 
 1. The trace is from a single session with a fixed policy — there is no exploration.
 2. The MFPT estimate is reliable for this specific policy (but may not generalise to other Arbor configurations).
-3. The bottleneck is not random bad luck — it is structural. The agent is deterministically taking 2.3 cycles every time.
+3. The cycle count is structural, not random variance. The agent deterministically takes 2.3 cycles every time.
 
-**What low entropy does NOT mean.** It does not mean the agent is broken. A fully converged, well-tuned agent should be nearly deterministic. Low entropy is healthy when MFPT is also low. It becomes concerning when MFPT is high — it means the agent is deterministically slow.
+**What low entropy does NOT mean.** It does not mean the agent is broken. A fully converged, well-tuned agent should be nearly deterministic. Low entropy is healthy when MFPT is also low. It is worth investigating when MFPT is high — the agent is taking the same path every time, so if MFPT is high, it is deterministically so.
 
 ---
 
@@ -294,9 +294,9 @@ This is a local linear approximation — it is exact for the given epsilon, but 
 
 **The pattern.** Every single suggestion is "shift mass from somewhere in the execution loop directly to `session.end`." And the deltas are almost identical (-7.5 to -8.0 across all five). This is not a coincidence — and `total_suggestions: 96` confirms it is not an artefact of the top-5 cutoff. All 96 improvable edges follow the same pattern.
 
-When suggestions cluster like this — many edges, similar deltas, all pointing to the same destination — it means **the bottleneck is not a specific broken transition.** It is a structural property of the whole loop. The agent is cycling too many times before converging.
+When suggestions cluster like this — many edges, similar deltas, all pointing to the same destination — no single edge accounts for the difference. It is a structural property of the whole loop — the agent passes through the cycle multiple times before reaching the target.
 
-The 10% perturbation on `executor.start → session.end` cuts MFPT from 27.9 to 19.9 — a 29% reduction. That is a large gain from a small change, which confirms the loop is the dominant cost.
+The 10% perturbation on `executor.start → session.end` cuts MFPT from 27.9 to 19.9 — a 29% reduction. That is a large sensitivity from a small change, which confirms the loop is the primary contributor to MFPT.
 
 **What "shift mass" means operationally.** If the top knob is `executor.start → session.end`, it means: when an executor finishes a task, it currently almost always loops back into the cycle. The agent would benefit from exiting more often after execution completes.
 
@@ -311,12 +311,12 @@ Good interpretation combines all four sections, not just the suggestions.
 For Arbor:
 
 1. **39 events, 0 skipped** — small but clean sample. Results are directional.
-2. **MFPT 27.9** — ~2.3 cycles per session. Not catastrophic but improvable.
+2. **MFPT 27.9** — ~2.3 cycles per session.
 3. **Entropy ≈ 0** — deterministic policy. The 2.3 cycles is not noise; Arbor reliably does this every time. That makes the MFPT estimate more trustworthy despite the small sample.
 4. **Recurrent: [session.end] only** — no thrashing traps. The agent will always converge. This is the green light on structure — if you want to improve MFPT, the agent will reach the goal, so the question is performance, not correctness.
-5. **Suggestions: uniform cluster** — the bottleneck is loop count, not a specific broken edge. Fix the convergence criterion, not an individual transition.
+5. **Suggestions: uniform cluster** — loop count is the structural driver, not any specific edge. The convergence criterion in `cycle.phase:decide` is the highest-leverage place to experiment.
 
-The synthesis: **Arbor is structurally healthy but loops too many times. Tighten the convergence check in `cycle.phase:decide`.**
+The synthesis: **Arbor is structurally healthy. If lower MFPT is the goal, the convergence check in `cycle.phase:decide` is where to start.**
 
 ---
 
@@ -329,10 +329,10 @@ The synthesis: **Arbor is structurally healthy but loops too many times. Tighten
 | `events_processed < 20` | Too few events — results are illustrative only, do not act on them |
 | High `lines_skipped` relative to processed | Event format mismatch — check field names |
 | `entropy_rate_bits` very high | Agent policy is nearly random — has not learned stable routing |
-| `entropy_rate_bits ≈ 0` with high MFPT | Deterministically slow — structural problem, not randomness |
-| All suggestions point to the same destination | Structural loop bottleneck — fix iteration count or convergence criterion, not a specific edge |
-| Suggestions have wildly different deltas | One specific edge is the bottleneck — directly addressable |
-| `projected_mfpt` is still very high | No single-edge perturbation will fix this — the problem is deeper |
+| `entropy_rate_bits ≈ 0` with high MFPT | Deterministically high MFPT — structural, not random variance |
+| All suggestions point to the same destination | Loop count is the structural driver — tuning the convergence criterion is higher leverage than any single edge |
+| Suggestions have wildly different deltas | One specific edge accounts for most of the MFPT delta — directly tunable |
+| `projected_mfpt` is still very high | No single-edge perturbation will move the needle — the structure runs deeper |
 
 ---
 
@@ -340,7 +340,7 @@ The synthesis: **Arbor is structurally healthy but loops too many times. Tighten
 
 **If you have a clear top knob** (one suggestion with a much larger delta than the rest): that edge is the highest-leverage place to experiment. Reinforce that transition — increase the probability of taking that path — and re-run to see if MFPT drops as projected.
 
-**If suggestions cluster uniformly** (like Arbor): the bottleneck is structural. Focus on the loop control logic — how many iterations the agent runs, what triggers convergence, what the stopping criterion is.
+**If suggestions cluster uniformly** (like Arbor): loop count is the structural driver. The loop control logic — how many iterations the agent runs, what triggers convergence, what the stopping criterion is — is the highest-leverage place to experiment.
 
 **If `baseline_mfpt` is null or recurrent traps exist**: fix correctness before optimising for speed. A trapped agent never reaches the goal regardless of how fast it moves.
 

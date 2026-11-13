@@ -8,3 +8,5 @@
 | [Optimization](concepts/optimization.md)                             | concept | Algorithmic performance optimization; first application domain for soka via AlgoTune        | optimization, algotune, performance, benchmark     |
 | [Deep Research](concepts/deep-research.md)                           | concept | OpenAI's iterative web-search-and-synthesis agent; canonical "researcher" knowledge agent   | deep-research, openai, web-search, synthesis       |
 | [GraphRAG](concepts/graphrag.md)                                     | concept | Microsoft's graph-based RAG; self-healing knowledge base archetype                          | graphrag, microsoft, graph, rag, knowledge-graph   |
+| [catrace](concepts/catrace.md)                                       | concept | The mathematical engine underlying soka: trace-chain folding, MFPT, communicating classes  | catrace, markov-chain, mfpt, trace, engine, go     |
+| [wikigraph](concepts/wikigraph.md)                                   | concept | Markov-chain analysis of Markdown wikis via [[wikilinks]]; first practical catrace app      | wikigraph, wiki, markov-chain, mfpt, go, catrace   |

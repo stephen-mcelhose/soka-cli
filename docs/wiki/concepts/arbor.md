@@ -1,16 +1,18 @@
 ---
 type: concept
 title: Arbor
-description: An autonomous algorithmic optimization agent from RUC/Microsoft Research that uses hypothesis-tree refinement to iteratively discover high-scoring solutions, and soka's primary beachhead for event-trace analysis.
+description: "Optimize anything" — an autonomous agent from RUC/Microsoft Research that treats scientific research methodology (hypothesis-tree refinement) as an optimization strategy, targeting any benchmarkable metric. soka's primary beachhead for event-trace analysis.
 tags: [arbor, autonomous-agents, optimization, events-jsonl, beachhead, hypothesis-tree]
 timestamp: 2026-11-13T01:58:49Z
 ---
 
 # Arbor
 
-Arbor is an autonomous [[Knowledge Agents|knowledge agent]] for algorithmic [[Optimization]], developed jointly by Renmin University of China (Gaoling School of AI) and Microsoft Research. Given a task — a scoring function and an editable solution file — Arbor runs a closed loop: it proposes hypotheses about how to improve the solution, implements the most promising ones in isolated git worktrees, evaluates them against the scorer, and uses the results to inform the next round. The process continues until a score target, convergence criterion, or budget is reached.
+Arbor's tagline is **"Optimize anything."** It is an autonomous agent that positions scientific research methodology as the most robust optimization strategy for complex, benchmarkable tasks. Where a standard optimizer mutates parameters and measures outcomes, Arbor adds the full apparatus of scientific inquiry — literature checks, structured hypothesis trees, backpropagation of insights — to avoid the local minima and redundant paths that simpler optimizers hit. Research is the cognitive method; optimization is the concrete objective.
 
-Its significance for soka is two-fold. First, Arbor's execution maps cleanly onto the [[Knowledge Agents|knowledge agent]] behavioral topology. Second, Arbor emits a well-structured `events.jsonl` log — a timestamped stream of milestone events — making it the sharpest available source of real agent execution traces for [[Markov Chain]] analysis.
+Developed jointly by Renmin University of China (Gaoling School of AI) and Microsoft Research, Arbor can target any task with a numeric metric: code speedup (AlgoTune), ML engineering (MLE-Bench), math reasoning, web research accuracy. The scorer is the only task-specific component; the rest of the loop is general.
+
+Its significance for soka is two-fold. First, Arbor's cycle maps cleanly onto the [[Knowledge Agents|knowledge agent]] behavioral topology. Second, it emits a well-structured `events.jsonl` log — a timestamped stream of milestone events — making it the sharpest available source of real agent execution traces for [[catrace]] analysis.
 
 ## Architecture
 

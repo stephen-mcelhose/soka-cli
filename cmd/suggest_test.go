@@ -137,6 +137,51 @@ func TestExpectedIterations(t *testing.T) {
 	}
 }
 
+// --- output contract: all expected keys present ---
+
+// TestAnalyzeOutputKeys verifies that analyze() returns all documented output
+// fields. This is the regression guard for the existing suggest behaviour —
+// adding --stream must not remove or rename any of these keys.
+func TestAnalyzeOutputKeys(t *testing.T) {
+	// A three-state loop (A→B→C→A) that feeds into a terminal state D.
+	// Repeated enough times that the kernel is non-trivial.
+	var lines []string
+	for i := 0; i < 10; i++ {
+		lines = append(lines, `{"type":"A"}`, `{"type":"B"}`, `{"type":"C"}`)
+	}
+	lines = append(lines, `{"type":"D"}`)
+	jsonl := strings.Join(lines, "\n")
+
+	out, err := analyze(strings.NewReader(jsonl), "D", "", "", 0, 0.10, 5)
+	if err != nil {
+		t.Fatalf("analyze: %v", err)
+	}
+
+	required := []string{
+		"events_processed",
+		"lines_skipped",
+		"boundary_states",
+		"entropy_rate_bits",
+		"classes",
+		"baseline_mfpt",
+		"expected_iterations",
+		"total_suggestions",
+		"suggestions",
+	}
+	for _, key := range required {
+		if _, ok := out[key]; !ok {
+			t.Errorf("output missing key %q", key)
+		}
+	}
+
+	// total_suggestions must be >= len(suggestions)
+	total, _ := out["total_suggestions"].(int)
+	shown, _ := out["suggestions"].([]map[string]any)
+	if total < len(shown) {
+		t.Errorf("total_suggestions (%d) < len(suggestions) (%d)", total, len(shown))
+	}
+}
+
 // --- integration: analyze() with the Arbor fixture ---
 
 // TestAnalyzeArborExpectedIterations runs the full analyze pipeline against the

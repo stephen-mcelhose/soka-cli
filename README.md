@@ -202,6 +202,9 @@ Malformed lines and lines with no resolvable state are skipped and counted in `l
 
 ## Bring your own trace
 
+> [!WARNING]
+> May require additional integration, know your data.
+
 Any JSONL stream where each line carries a `type` or `event` string works directly. For frameworks that use a different field name, a one-line `jq` remap is sufficient — no adapter library needed:
 
 ```sh

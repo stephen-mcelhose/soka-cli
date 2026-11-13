@@ -338,7 +338,7 @@ The synthesis: **Arbor is structurally healthy but loops too many times. Tighten
 
 ## Next steps after interpreting results
 
-**If you have a clear top knob** (one suggestion with a much larger delta than the rest): that edge is your intervention target. Adjust the agent's policy so that transition receives more weight — increase the probability of taking that path.
+**If you have a clear top knob** (one suggestion with a much larger delta than the rest): that edge is the highest-leverage place to experiment. Reinforce that transition — increase the probability of taking that path — and re-run to see if MFPT drops as projected.
 
 **If suggestions cluster uniformly** (like Arbor): the bottleneck is structural. Focus on the loop control logic — how many iterations the agent runs, what triggers convergence, what the stopping criterion is.
 

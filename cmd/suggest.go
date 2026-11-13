@@ -45,7 +45,8 @@ Output fields:
   total_suggestions  total improvable edges before --top-k truncation
   suggestions        top-k ranked edges, each with projected MFPT and delta
 
-See docs/interpreting-results.md for a full field-by-field walkthrough.`,
+See https://github.com/stephen-mcelhose/soka-cli/blob/main/docs/interpreting-results.md
+for a full field-by-field walkthrough.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSuggest(cmd, f, args)

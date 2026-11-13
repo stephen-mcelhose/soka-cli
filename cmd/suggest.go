@@ -29,7 +29,7 @@ func newSuggestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "suggest [file]",
 		Short: "Estimate a Markov kernel from a JSONL event stream and suggest MFPT knobs",
-		Long: `Ingest a JSONL agent event stream, estimate a Markov transition kernel,
+			Long: `Ingest a JSONL agent event stream, estimate a Markov transition kernel,
 and return ranked policy knobs — edges in the agent's state graph whose
 reinforcement would most reduce the mean number of steps to reach --target.
 
@@ -47,30 +47,27 @@ Output fields:
   total_suggestions  total improvable edges before --top-k truncation
   suggestions        top-k ranked edges, each with projected MFPT and delta
 
+With --stream, emits a compact JSON tick at each session boundary instead of
+one result at EOF. Tick format:
+  {"tick": 1, "events_processed": 67, "baseline_mfpt": 23.4,
+   "top_knob": {"from": "executor.start", "to": "session.end", "delta": -8.2}}
+
 See https://github.com/stephen-mcelhose/soka-cli/blob/main/docs/interpreting-results.md
-for a full field-by-field walkthrough.
+for a full field-by-field walkthrough.`,
+			Example: `  # one-shot from file
+  soka suggest --target session.end events.jsonl
 
-Stream mode (--stream):
+  # from stdin
+  cat events.jsonl | soka suggest --target session.end
 
-  Reads the same file or stdin continuously and emits a compact JSON tick at
-  each session boundary (every time --target is seen) rather than blocking
-  until EOF and returning one result.
+  # stream mode — emit a tick per completed session
+  cat sessions.jsonl | soka suggest --target session.end --stream
 
-  Tick format:
-    {"tick": 1, "events_processed": 67, "baseline_mfpt": 23.4,
-     "top_knob": {"from": "executor.start", "to": "session.end", "delta": -8.2}}
+  # stream from a live log, suppress until 100 events seen
+  tail -f events.jsonl | soka suggest --target session.end --stream --min-events 100
 
-  --min-events (default 50)
-    Data sufficiency floor. No tick is emitted until at least this many events
-    have been ingested. Applies even at EOF.
-
-  --delta-threshold (default 0)
-    Suppress a session-boundary tick when MFPT has not shifted by more than
-    this value since the last tick. 0 = emit at every session boundary.
-
-  Example — tail a live log file:
-    tail -f events.jsonl | soka suggest --target session.end --stream
-    cat sessions.jsonl  | soka suggest --target session.end --stream --min-events 100`,
+  # stream, suppress ticks where MFPT hasn't shifted by more than 2
+  cat sessions.jsonl | soka suggest --target session.end --stream --delta-threshold 2.0`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSuggest(cmd, f, args)

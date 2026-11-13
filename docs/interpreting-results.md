@@ -104,9 +104,30 @@ In plain language: **on average, Arbor takes ~28 steps to finish a session.**
 
 A "step" here is a transition between observed states — not a wall-clock second or a token count. Each transition in the Arbor chain corresponds to a phase boundary: `cycle.phase:observe → cycle.phase:ideate` is one step, `executor.start → eval.end` is one step.
 
-**How to read the number.** MFPT is relative to your agent and your target. 27.9 is not inherently high or low — it depends on how many states the agent has and how many cycles it typically runs.
+**How to read the number.** MFPT is relative to your agent and your target. 27.9 is not inherently high or low — it depends on how many states the agent has and how many cycles it typically runs. For a more immediately meaningful number, see `expected_iterations` below.
 
-A useful sanity check: divide MFPT by the number of states in one full cycle. Arbor's main loop has 12 states. `27.9 / 12 ≈ 2.3`, so Arbor runs approximately **2.3 full cycles** per session on average. That is the operationally meaningful number.
+---
+
+### `expected_iterations`
+
+```json
+"expected_iterations": 2.325892857142857
+```
+
+**What it means.** The average number of times the agent passes through its main loop before reaching the target. Computed as `baseline_mfpt / size(largest transient SCC)`.
+
+For Arbor: the main loop has 12 states (`cycle.start` through `cycle.end`). `27.9 / 12 = 2.33` — Arbor runs approximately **2.3 full cycles** per session on average.
+
+This is the operationally meaningful number. MFPT of 27.9 is abstract; "2.3 iterations" is concrete and actionable.
+
+**When it is `null`.** Returned as `null` when:
+- No main cycle is detectable (agent has no multi-state transient SCC — it is a straight-line pipeline with no loop)
+- `baseline_mfpt` is itself `null`
+- The agent has multiple loops of similar size (ambiguous which is "the" main cycle)
+
+For agents without a loop, `baseline_mfpt` alone is the right metric.
+
+---
 
 **Red flag.** If `baseline_mfpt` is `null`, the target state is unreachable from the stationary distribution — the agent can never get there from some starting configurations. This almost always means a recurrent trap exists that does not include the target (see `classes.Recurrent` below).
 

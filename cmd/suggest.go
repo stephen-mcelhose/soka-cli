@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/stephen-mcelhose/catrace"
 	"github.com/stephen-mcelhose/catrace/stream"
 )
 
@@ -104,14 +105,63 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 	}
 
 	return map[string]any{
-		"events_processed":  observed,
-		"lines_skipped":     skipped,
-		"boundary_states":   report.BoundaryStates,
-		"entropy_rate_bits": report.EntropyRate,
-		"classes":           report.Classes,
-		"baseline_mfpt":     finiteOrNil(report.BaselineMFPT),
-		"suggestions":       sanitizeSuggestions(report.Suggestions),
+		"events_processed":    observed,
+		"lines_skipped":       skipped,
+		"boundary_states":     report.BoundaryStates,
+		"entropy_rate_bits":   report.EntropyRate,
+		"classes":             report.Classes,
+		"baseline_mfpt":       finiteOrNil(report.BaselineMFPT),
+		"expected_iterations": expectedIterations(report.Classes, report.BaselineMFPT),
+		"suggestions":         sanitizeSuggestions(report.Suggestions),
 	}, nil
+}
+
+// expectedIterations divides baseline_mfpt by the size of the largest transient
+// multi-state SCC — the main loop — giving the average number of times the agent
+// cycles before reaching the target. Returns nil when no clear main cycle exists.
+func expectedIterations(classes any, mfpt float64) any {
+	if math.IsInf(mfpt, 0) || math.IsNaN(mfpt) || mfpt <= 0 {
+		return nil
+	}
+	cd, ok := classes.(*catrace.ClassDecomposition)
+	if !ok {
+		return nil
+	}
+
+	// Mark all states that belong to a recurrent SCC.
+	recurrent := map[int]bool{}
+	for _, scc := range cd.Recurrent {
+		for _, idx := range scc {
+			recurrent[idx] = true
+		}
+	}
+
+	// Find the largest transient SCC with more than one state.
+	// Singleton SCCs are entry/exit waypoints (e.g. session.start, convergence.reached).
+	largest := 0
+	for _, scc := range cd.SCCs {
+		if len(scc) <= 1 {
+			continue
+		}
+		isRecurrent := false
+		for _, idx := range scc {
+			if recurrent[idx] {
+				isRecurrent = true
+				break
+			}
+		}
+		if isRecurrent {
+			continue
+		}
+		if len(scc) > largest {
+			largest = len(scc)
+		}
+	}
+
+	if largest == 0 {
+		return nil // no main cycle detected
+	}
+	return finiteOrNil(mfpt / float64(largest))
 }
 
 func finiteOrNil(v float64) any {

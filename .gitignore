@@ -23,6 +23,7 @@ go.work.sum
 
 # Experiment fixtures (fetched on demand, never committed)
 testdata/
+!testdata/*.jsonl
 
 # OS
 .DS_Store

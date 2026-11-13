@@ -56,11 +56,28 @@ Claim **supported**. The top policy knob is `cycle.phase:dispatch → session.en
 **Caveats:**
 - 117 events is sparse — MFPT estimates are directional, not authoritative
 - Fixture is a demo/illustrative session, not a production run
-- A real `algotune_knn` session (run with `arbor` + LLM API key) would give higher-confidence estimates
+
+---
+
+## Run B — Agent-generated session (algotune_knn, 4 cycles, 9.66x final)
+
+**Fixture:** `testdata/arbor-soka-run.jsonl` (93 events)  
+**Method:** arbor skill suite (arbor-research-agent + arbor_state.py) run by this agent. No API key needed — agent IS the LLM.  
+**Result:** 1.01x → 9.66x (GEMM + argpartition + float32 + chunk=128)
+
+| ε    | Top knob (`from → to`)             | `mfpt_delta` | `projected_mfpt` |
+| ---- | ----------------------------------- | ------------ | ---------------- |
+| 0.05 | `idea.proposed → session.end`       | −10.26       | 37.86            |
+| 0.15 | `idea.proposed → session.end`       | −21.16       | 26.96            |
+| 0.30 | `idea.proposed → session.end`       | −28.82       | 19.30            |
+
+**Contrast with demo session** (top knob: `cycle.phase:dispatch`):  
+Our session over-ideated — 6 proposals, 3 merged, 3 pruned. The bottleneck was ideation volume, not post-dispatch convergence detection. The demo session had a different bottleneck because its pruning rate was lower. Both are domain-interpretable. Soka surfaces the actual bottleneck from the trace rather than a fixed answer.
 
 ---
 
 ## Discoveries / surprises
 
 - catrace appends `:phase` from arbor's `data.phase` field, giving `cycle.phase:observe` etc. — the `--keep` flag must use the expanded names, not bare `cycle.phase`
-- Trace fold halves the MFPT (103 → 51), confirming that LLM token deltas and tool calls are the dominant source of path length in an Arbor session
+- Trace fold halves the MFPT (103 → 51 for demo, 78 → 48 for agent session), confirming that tool calls and LLM deltas dominate path length
+- Top knob differs between sessions: `cycle.phase:dispatch` (demo) vs `idea.proposed` (agent) — reflects different pruning rates, as expected

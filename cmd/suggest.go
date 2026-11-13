@@ -56,42 +56,54 @@ func runSuggest(cmd *cobra.Command, f *suggestFlags, args []string) error {
 		defer closer.Close()
 	}
 
-	est := stream.NewEstimator(f.halfLife)
-	observed, skipped, err := stream.IngestJSONL(in, est.ObserveNext)
+	out, err := analyze(in, f.target, f.keep, f.knobs, f.halfLife, f.eps, f.topK)
 	if err != nil {
-		return fmt.Errorf("ingest: %w", err)
+		return err
+	}
+
+	enc := json.NewEncoder(cmd.OutOrStdout())
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
+}
+
+// analyze is the shared core used by both the CLI and the MCP server.
+func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, topK int) (map[string]any, error) {
+	est := stream.NewEstimator(halfLife)
+	observed, skipped, err := stream.IngestJSONL(r, est.ObserveNext)
+	if err != nil {
+		return nil, fmt.Errorf("ingest: %w", err)
 	}
 	if observed == 0 {
-		return fmt.Errorf("no events with a canonical state observed (%d lines skipped)", skipped)
+		return nil, fmt.Errorf("no events with a canonical state observed (%d lines skipped)", skipped)
 	}
 
 	k, err := est.Kernel()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	keep := splitCSV(f.keep)
-	if len(keep) > 0 {
-		k, err = stream.TraceByName(k, keep, 1e-12)
+	keepList := splitCSV(keep)
+	if len(keepList) > 0 {
+		k, err = stream.TraceByName(k, keepList, 1e-12)
 		if err != nil {
-			return fmt.Errorf("trace: %w", err)
+			return nil, fmt.Errorf("trace: %w", err)
 		}
 		if err := k.Validate(1e-9); err != nil {
-			return fmt.Errorf("traced kernel invalid: %w", err)
+			return nil, fmt.Errorf("traced kernel invalid: %w", err)
 		}
 	}
 
 	report, err := stream.AnalyzeAndSuggest(k, stream.SuggestConfig{
-		TargetState:  f.target,
-		Controllable: splitCSV(f.knobs),
-		Epsilon:      f.eps,
-		TopK:         f.topK,
+		TargetState:  target,
+		Controllable: splitCSV(knobs),
+		Epsilon:      eps,
+		TopK:         topK,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	out := map[string]any{
+	return map[string]any{
 		"events_processed":  observed,
 		"lines_skipped":     skipped,
 		"boundary_states":   report.BoundaryStates,
@@ -99,10 +111,7 @@ func runSuggest(cmd *cobra.Command, f *suggestFlags, args []string) error {
 		"classes":           report.Classes,
 		"baseline_mfpt":     finiteOrNil(report.BaselineMFPT),
 		"suggestions":       sanitizeSuggestions(report.Suggestions),
-	}
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
+	}, nil
 }
 
 func finiteOrNil(v float64) any {

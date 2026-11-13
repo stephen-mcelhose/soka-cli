@@ -17,4 +17,4 @@ No build step needed beyond `go build -o soka .` in the repo root.
 | Slug                      | Data source                              | Status   |
 | ------------------------- | ---------------------------------------- | -------- |
 | `harvey-deep-research`    | harveyai/deep-research-starter (Google)  | Complete — 11/11 aligned with catrace |
-| `arbor-knowledge-agent`   | RUC-NLPIR/Arbor session logs             | Pending  |
+| `arbor-knowledge-agent`   | RUC-NLPIR/Arbor bundled demo (algotune_knn, CPU-only) | Complete — dispatch bottleneck confirmed |

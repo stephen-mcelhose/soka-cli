@@ -48,7 +48,29 @@ Output fields:
   suggestions        top-k ranked edges, each with projected MFPT and delta
 
 See https://github.com/stephen-mcelhose/soka-cli/blob/main/docs/interpreting-results.md
-for a full field-by-field walkthrough.`,
+for a full field-by-field walkthrough.
+
+Stream mode (--stream):
+
+  Reads the same file or stdin continuously and emits a compact JSON tick at
+  each session boundary (every time --target is seen) rather than blocking
+  until EOF and returning one result.
+
+  Tick format:
+    {"tick": 1, "events_processed": 67, "baseline_mfpt": 23.4,
+     "top_knob": {"from": "executor.start", "to": "session.end", "delta": -8.2}}
+
+  --min-events (default 50)
+    Data sufficiency floor. No tick is emitted until at least this many events
+    have been ingested. Applies even at EOF.
+
+  --delta-threshold (default 0)
+    Suppress a session-boundary tick when MFPT has not shifted by more than
+    this value since the last tick. 0 = emit at every session boundary.
+
+  Example — tail a live log file:
+    tail -f events.jsonl | soka suggest --target session.end --stream
+    cat sessions.jsonl  | soka suggest --target session.end --stream --min-events 100`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSuggest(cmd, f, args)

@@ -35,14 +35,17 @@ cat events.jsonl | soka suggest --target CLAIM_VERIFIED --top-k 3
 
 **Flags**
 
-| Flag          | Default | Description                                               |
-| ------------- | ------- | --------------------------------------------------------- |
-| `--target`    | —       | Goal state to minimize MFPT toward **(required)**         |
-| `--keep`      | —       | Comma-separated boundary states to retain after Trace     |
-| `--knobs`     | —       | Comma-separated controllable from-states (default: all)   |
-| `--halflife`  | 0       | EMA half-life in events (0 = infinite memory)             |
-| `--eps`       | 0.10    | Perturbation mass epsilon                                 |
-| `--top-k`     | 5       | Number of top interventions to return                     |
+| Flag                 | Default | Description                                                     |
+| -------------------- | ------- | --------------------------------------------------------------- |
+| `--target`           | —       | Goal state to minimize MFPT toward **(required)**               |
+| `--keep`             | —       | Comma-separated boundary states to retain after Trace           |
+| `--knobs`            | —       | Comma-separated controllable from-states (default: all)         |
+| `--halflife`         | 0       | EMA half-life in events (0 = infinite memory)                   |
+| `--eps`              | 0.10    | Perturbation mass per suggestion (0–1)                          |
+| `--top-k`            | 5       | Number of suggestions to return (0 = all)                       |
+| `--stream`           | false   | Stream mode: emit a tick per session boundary instead of one result at EOF |
+| `--min-events`       | 50      | Minimum events before first tick *(stream only)*                |
+| `--delta-threshold`  | 0       | Suppress ticks where MFPT hasn't shifted by this much *(stream only)* |
 
 **Output** (JSON)
 
@@ -75,6 +78,30 @@ cat events.jsonl | soka suggest --target CLAIM_VERIFIED --top-k 3
 ```
 
 For a full field-by-field walkthrough see [docs/interpreting-results.md](docs/interpreting-results.md).
+
+**Stream mode**
+
+Pass `--stream` to read continuously and emit a compact tick at each session boundary (every time `--target` is seen) rather than blocking until EOF:
+
+```sh
+# tail a live log
+tail -f events.jsonl | soka suggest --target session.end --stream
+
+# cat a multi-session file — one tick per completed session
+cat sessions.jsonl | soka suggest --target session.end --stream --min-events 100
+
+# suppress ticks when MFPT hasn't moved meaningfully
+cat sessions.jsonl | soka suggest --target session.end --stream --delta-threshold 2.0
+```
+
+Tick output (newline-delimited JSON):
+
+```json
+{"tick": 1, "events_processed": 67, "baseline_mfpt": 23.4, "top_knob": {"from": "executor.start", "to": "session.end", "delta": -8.2}}
+{"tick": 2, "events_processed": 134, "baseline_mfpt": 21.1, "top_knob": {"from": "eval.end", "to": "session.end", "delta": -7.8}}
+```
+
+`--min-events` (default 50) is a data sufficiency floor — no tick fires until at least that many events have been ingested. `--delta-threshold` suppresses ticks where MFPT is stable; 0 (default) emits at every session boundary.
 
 ### `soka mcp`
 

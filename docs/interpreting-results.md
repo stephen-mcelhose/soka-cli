@@ -313,7 +313,7 @@ For Arbor:
 1. **39 events, 0 skipped** — small but clean sample. Results are directional.
 2. **MFPT 27.9** — ~2.3 cycles per session. Not catastrophic but improvable.
 3. **Entropy ≈ 0** — deterministic policy. The 2.3 cycles is not noise; Arbor reliably does this every time. That makes the MFPT estimate more trustworthy despite the small sample.
-4. **Recurrent: [session.end] only** — no thrashing traps. The agent will always converge. This is the green light that tells you the problem is performance, not correctness.
+4. **Recurrent: [session.end] only** — no thrashing traps. The agent will always converge. This is the green light on structure — if you want to improve MFPT, the agent will reach the goal, so the question is performance, not correctness.
 5. **Suggestions: uniform cluster** — the bottleneck is loop count, not a specific broken edge. Fix the convergence criterion, not an individual transition.
 
 The synthesis: **Arbor is structurally healthy but loops too many times. Tighten the convergence check in `cycle.phase:decide`.**

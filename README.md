@@ -78,9 +78,44 @@ For a full field-by-field walkthrough see [docs/interpreting-results.md](docs/in
 
 ### `soka mcp`
 
-Start a stdio-based MCP server exposing Markov analysis as callable tools — compatible with LangGraph, LlamaIndex, Claude Agent SDK, and any MCP client.
+Start a stdio-based MCP server exposing Markov analysis as a callable tool — compatible with Claude Desktop, LangGraph, LlamaIndex, and any MCP client that supports stdio transport.
 
-> **Coming soon.**
+```sh
+soka mcp
+```
+
+The server speaks JSON-RPC 2.0 over stdin/stdout. Your MCP client launches it as a subprocess — there is no port or network address.
+
+**Tool: `analyze`**
+
+| Argument | Required | Description |
+| -------- | -------- | ----------- |
+| `target` | ✓ | Goal state name (e.g. `session.end`, `CLAIM_VERIFIED`) |
+| `events_path` | — | Absolute path to a `.jsonl` events file |
+| `events` | — | Inline JSONL string (use for small streams; prefer `events_path` for files) |
+| `keep` | — | Comma-separated boundary states to retain after Trace-fold |
+| `knobs` | — | Comma-separated from-states to consider (default: all except target) |
+| `halflife` | — | EMA half-life in events (default: 0 = equal weight) |
+| `eps` | — | Perturbation mass per suggestion (default: 0.10) |
+| `top_k` | — | Number of suggestions to return (default: 5, 0 = all) |
+
+`events` and `events_path` are mutually exclusive; at least one is required.
+
+**Verifying with MCP Inspector**
+
+```sh
+npx --registry https://registry.npmjs.org @modelcontextprotocol/inspector
+```
+
+In the Inspector UI:
+
+| Field | Value |
+| ----- | ----- |
+| Transport | `stdio` |
+| Command | `/path/to/soka` |
+| Arguments | `mcp` |
+
+Then open the **Tools** tab → select `analyze` → fill in `target` and `events_path`.
 
 ---
 

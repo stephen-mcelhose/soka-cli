@@ -39,14 +39,20 @@ func newMCPCmd() *cobra.Command {
 
 Exposes one tool:
 
-  analyze   Ingest a JSONL agent event stream and return ranked MFPT-reducing
-            policy knobs. Equivalent to soka suggest.
+  analyze   Ingest a JSONL agent event stream and return ranked policy knobs.
+            Equivalent to soka suggest. Required argument: target (string).
+            Pass events inline via 'events' or by file path via 'events_path'.
 
-Compatible with LangGraph, LlamaIndex, Claude Agent SDK, and any MCP client
-that supports stdio transport.
+Compatible with any MCP client that supports stdio transport (Claude Desktop,
+LangGraph, LlamaIndex, Claude Agent SDK, etc.).
 
-Usage (stdio):
-  soka mcp`,
+To verify with MCP Inspector:
+  1. Transport: stdio
+  2. Command:   /path/to/soka
+  3. Arguments: mcp
+  4. Open the Tools tab, select 'analyze', and fill in:
+       target       — goal state name (e.g. session.end)
+       events_path  — absolute path to a .jsonl events file`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runMCP()
 		},

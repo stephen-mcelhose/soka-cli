@@ -27,11 +27,25 @@ func newSuggestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "suggest [file]",
 		Short: "Estimate a Markov kernel from a JSONL event stream and suggest MFPT knobs",
-		Long: `Stream JSON events (JSONL) into an EMA Estimator, optionally Trace-fold
-onto boundary states, then rank single-row policy perturbations that reduce
-mean first-passage time to --target via AnalyzeAndSuggest.
+		Long: `Ingest a JSONL agent event stream, estimate a Markov transition kernel,
+and return ranked policy knobs — edges in the agent's state graph whose
+reinforcement would most reduce the mean number of steps to reach --target.
 
-Reads FILE if given, otherwise stdin. Malformed lines are skipped.`,
+Reads FILE if given, otherwise stdin. Malformed lines are skipped and
+counted in lines_skipped. Output is JSON.
+
+Output fields:
+  events_processed   number of events successfully ingested
+  lines_skipped      malformed or unresolvable lines ignored
+  boundary_states    ordered list of observed state names
+  entropy_rate_bits  routing randomness in bits/step (0 = deterministic)
+  classes            communicating class structure (SCCs, recurrent, transient)
+  baseline_mfpt      mean steps to --target from the stationary distribution
+  expected_iterations baseline_mfpt / main-loop size (nil if no loop detected)
+  total_suggestions  total improvable edges before --top-k truncation
+  suggestions        top-k ranked edges, each with projected MFPT and delta
+
+See docs/interpreting-results.md for a full field-by-field walkthrough.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSuggest(cmd, f, args)
@@ -41,8 +55,8 @@ Reads FILE if given, otherwise stdin. Malformed lines are skipped.`,
 	cmd.Flags().StringVar(&f.keep, "keep", "", "comma-separated boundary states to retain after Trace (empty = no fold)")
 	cmd.Flags().StringVar(&f.knobs, "knobs", "", "comma-separated controllable from-states (empty = all except target)")
 	cmd.Flags().Float64Var(&f.halfLife, "halflife", 0, "EMA half-life in events (0 = infinite memory)")
-	cmd.Flags().Float64Var(&f.eps, "eps", 0.10, "perturbation mass epsilon")
-	cmd.Flags().IntVar(&f.topK, "top-k", 5, "number of top interventions to return")
+	cmd.Flags().Float64Var(&f.eps, "eps", 0.10, "how much transition mass to shift per perturbation (0–1)")
+	cmd.Flags().IntVar(&f.topK, "top-k", 5, "number of top suggestions to return (0 = all)")
 	cmd.Flags().IntVar(&f.topK, "top", 5, "alias for --top-k")
 	_ = cmd.MarkFlagRequired("target")
 	return cmd

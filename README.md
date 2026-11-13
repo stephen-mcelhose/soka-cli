@@ -77,17 +77,47 @@ Start a stdio-based MCP server exposing Markov analysis as callable tools — co
 
 ## Event format
 
-Events are JSONL, one JSON object per line. Each event must carry a `state` field (or `status` as a fallback) identifying the agent's current boundary state:
+Events are JSONL, one JSON object per line. The state label is resolved from each line in priority order:
+
+1. `type` string field
+2. `event` string field (fallback)
+3. If `status` is set, appended as `:<status>`
+4. If `data.phase` is set, appended as `:<phase>` (Arbor-style cycle events)
 
 ```jsonl
-{"state": "QUERY_DECOMPOSED", "topic": "retrieval", "ts": "2025-01-01T00:00:00Z"}
-{"state": "VECTOR_RETRIEVED",  "topic": "retrieval"}
-{"state": "CONTRADICTION_FOUND"}
-{"state": "WEB_FALLBACK"}
-{"state": "CLAIM_VERIFIED"}
+{"type": "QUERY_DECOMPOSED", "ts": "2025-01-01T00:00:00Z"}
+{"type": "response.web_search_call", "status": "in_progress"}
+{"type": "cycle.phase", "data": {"phase": "observe"}}
+{"event": "tool.end", "status": "success"}
 ```
 
-Malformed lines are skipped and counted in `lines_skipped`.
+Malformed lines and lines with no resolvable state are skipped and counted in `lines_skipped`. All other fields are ignored.
+
+## Bring your own trace
+
+Any JSONL stream where each line carries a `type` or `event` string works directly. For frameworks that use a different field name, a one-line `jq` remap is sufficient — no adapter library needed:
+
+```sh
+# LangGraph streaming (uses "event" natively — may work as-is)
+cat langgraph_trace.jsonl | soka suggest --target graph.end
+
+# LangSmith run export (uses "run_type")
+cat langsmith_runs.jsonl | jq -c '{type: .run_type, status: .status}' \
+  | soka suggest --target chain:success
+
+# OpenTelemetry spans (uses "name")
+cat otel_spans.jsonl | jq -c '{type: .name, status: .status}' \
+  | soka suggest --target request.end
+
+# PI agent (--mode json emits JSON events over stdout)
+pi --mode json -p "research topic X" \
+  | soka suggest --target response.done
+
+# Any other source: map whatever field holds the state label to "type"
+cat custom.jsonl | jq -c '{type: .YOUR_FIELD}' | soka suggest --target ...
+```
+
+The experiments in `experiments/` each demonstrate a validated trace source with boundary states and flags recorded inline.
 
 ---
 

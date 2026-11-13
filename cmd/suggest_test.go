@@ -179,6 +179,31 @@ func TestAnalyzeArborExpectedIterations(t *testing.T) {
 	t.Logf("expected_iterations = %.4f", got)
 }
 
+// TestNamedClassesInvariantViolation verifies that namedClasses panics with an
+// invariantViolation — not a silent fallback label — when catrace returns an
+// index that is out of bounds for the boundary_states slice.
+func TestNamedClassesInvariantViolation(t *testing.T) {
+	bad := &catrace.ClassDecomposition{
+		SCCs:      [][]int{{0}, {1, 99}}, // index 99 doesn't exist
+		Recurrent: [][]int{{0}},
+		Transient: []int{1, 99},
+		Periods:   map[int]int{0: 1},
+	}
+	names := []string{"state.a", "state.b"} // only 2 names; index 99 is invalid
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic, got none")
+		}
+		if _, ok := r.(invariantViolation); !ok {
+			t.Fatalf("expected invariantViolation panic, got %T: %v", r, r)
+		}
+	}()
+
+	namedClasses(bad, names)
+}
+
 // TestAnalyzeNoMainLoop verifies expected_iterations is nil for a straight-line
 // agent (no loop in the trace).
 func TestAnalyzeNoMainLoop(t *testing.T) {

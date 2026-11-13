@@ -118,7 +118,9 @@ func analyze(r io.Reader, target, keep, knobs string, halfLife, eps float64, top
 
 // namedClasses translates a ClassDecomposition's integer indices into state names
 // using the boundary_states slice, so the JSON output is human-readable.
-// Falls back to the raw ClassDecomposition if the type assertion fails.
+// Panics with invariantViolation if any index is out of bounds — that would
+// indicate a catrace bug (kernel and class decomposition out of sync) and must
+// never be silently swallowed.
 func namedClasses(classes any, names []string) any {
 	cd, ok := classes.(*catrace.ClassDecomposition)
 	if !ok {
@@ -129,7 +131,10 @@ func namedClasses(classes any, names []string) any {
 		if idx >= 0 && idx < len(names) {
 			return names[idx]
 		}
-		return fmt.Sprintf("state_%d", idx)
+		panic(invariantViolation(fmt.Sprintf(
+			"ClassDecomposition state index %d out of bounds (kernel has %d boundary states) — catrace kernel and class decomposition are out of sync",
+			idx, len(names),
+		)))
 	}
 
 	nameSCC := func(scc []int) []string {
@@ -158,11 +163,13 @@ func namedClasses(classes any, names []string) any {
 	// Periods keys are SCC indices; convert to the first state name of that SCC.
 	periods := make(map[string]int, len(cd.Periods))
 	for sccIdx, period := range cd.Periods {
-		key := fmt.Sprintf("scc_%d", sccIdx)
-		if sccIdx >= 0 && sccIdx < len(cd.SCCs) && len(cd.SCCs[sccIdx]) > 0 {
-			key = nameOf(cd.SCCs[sccIdx][0])
+		if sccIdx < 0 || sccIdx >= len(cd.SCCs) || len(cd.SCCs[sccIdx]) == 0 {
+			panic(invariantViolation(fmt.Sprintf(
+				"Periods key %d references missing or empty SCC (have %d SCCs) — catrace class decomposition is inconsistent",
+				sccIdx, len(cd.SCCs),
+			)))
 		}
-		periods[key] = period
+		periods[nameOf(cd.SCCs[sccIdx][0])] = period
 	}
 
 	return map[string]any{
@@ -172,6 +179,13 @@ func namedClasses(classes any, names []string) any {
 		"Periods":   periods,
 	}
 }
+
+// invariantViolation is the panic value used when catrace returns a structurally
+// inconsistent result. Having a named type makes it easy to identify in a stack
+// trace and to target in tests with recover().
+type invariantViolation string
+
+func (e invariantViolation) Error() string { return string(e) }
 
 // expectedIterations divides baseline_mfpt by the size of the largest transient
 // multi-state SCC — the main loop — giving the average number of times the agent
